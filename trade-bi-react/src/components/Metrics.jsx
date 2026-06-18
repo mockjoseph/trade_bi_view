@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import { supabase } from '../supabaseClient'
 import MainMetricCard from './MainMetricCard'
 import { HARDCODED_ORG_ID } from '../constants';
+import { use } from 'react';
 
 async function fetchRevenue(){
     const { data, error } = await supabase
@@ -12,9 +13,6 @@ async function fetchRevenue(){
     if(error){
         console.log(error);
         throw error;
-    }
-    if(!data){
-        console.log('Data is null', data)
     }
     
     return data ?? 0;
@@ -44,59 +42,57 @@ async function fetchOutstandingPayments(){
     console.log(data);
     return data?.[0] ?? { invoice_count: 0, total_revenue: 0 };
 }
-{/* 
-async function fetchTotalJobs() {
-    const { count, error } = await supabase
-        .from('jobs')
-        .select('*', { count: 'exact', head: true });
 
-    if (error) {
-        console.error(error);
+async function fetchThisMonthsMetrics(){
+    const { data, error } = await supabase.rpc('get_this_month_metrics', {org_id: HARDCODED_ORG_ID})
+
+    if(error){
+        console.log(error);
         throw error;
     }
 
-    return count ?? 0;
+    return data?.[0] ?? {job_count: 0, total_revenue: 0};
 }
 
-async function fetchRecentJobData() {
-    const { data, error } = await supabase
-        .from('jobs')
-        .select('*');
+async function fetchLastMonthMetrics(){
+    const {data, error} = await supabase.rpc('get_last_month_metrics', {org_id : HARDCODED_ORG_ID})
 
-    if (error) {
-        console.error(error);
-        throw error;
+    if(error){
+        console.log(error)
+        throw error
     }
-
-    return data ?? [];
+    console.log("last months metric data", data);
+    return data?.[0] ?? {job_count: 0, total_revenue: 0};
 }
 
-async function fetchOutstandingPayments() {
-    const { count, error } = await supabase
-        .from('financials')
-        .select('*, jobs!inner(*)', { count: 'exact', head: true })
-        .eq('billing_status', 'invoiced');
-
-    if (error) {
-        console.error(error);
-        throw error;
-    }
-
-    return count ?? 0;
+function computeChange(thisMonth, lastMonth){
+    // Takes in metrics for this month and last month and returns growth or decay
+    return ((thisMonth - lastMonth) / thisMonth) * 100;
 }
-*/}
+
 
 export default function Metrics() {
-    const { data: revenue = 0, isLoading: revenueLoading, isError: revenueError } = useQuery({
-        queryKey: ['revenue'],
-        queryFn: fetchRevenue,
-    });
 
+    const { data: thisMonthMetrics = {job_count: 0, total_revenue: 0},
+            isLoading: thisMonthMetricsLoading,
+            isError: thisMonthMetricsError
+        } = useQuery({
+            queryKey: ['thisMonthMetrics'],
+            queryFn: fetchThisMonthsMetrics,
+        });
     
     const { data: totalJobs = 0, isLoading: jobsLoading, isError: jobsError } = useQuery({
         queryKey: ['totalJobs'],
         queryFn: fetchTotalJobs,
     });
+
+    const { data: lastMonthMetrics = {job_count: 0, total_revenue: 0},
+            isLoading: lastMonthMetricsLoading,
+            isError: lastMonthMetricsError
+        } = useQuery({
+            queryKey: ['lastMonthMetrics'],
+            queryFn: fetchLastMonthMetrics,
+        });
 
     {/* 
     const { data: recentJobs = [], isLoading: recentJobsLoading, isError: recentJobsError } = useQuery({
@@ -112,22 +108,30 @@ export default function Metrics() {
         queryKey: ['outstandingPayments'],
         queryFn: fetchOutstandingPayments,
     });
-        
+    
+    let revenueChange = 0;
+    let jobCountChange = 0;
+    if(lastMonthMetrics && thisMonthMetrics){
+        console.log("last month revenue", lastMonthMetrics.total_revenue);
+        console.log("this months revenue", thisMonthMetrics.total_revenue);
+        revenueChange = computeChange(thisMonthMetrics.total_revenue, lastMonthMetrics.total_revenue);
+        jobCountChange = computeChange(thisMonthMetrics.job_count, lastMonthMetrics.job_count);
+    }
     return (
         <>
             <MainMetricCard
                 label={"REVENUE"}
-                value={revenueLoading ? "..." : revenueError ? "Error" : `$${revenue}`}
-                sub={"N/A"}
-                trend={"up"}
-                accentClass={"border-emerald-500"}
+                value={thisMonthMetricsLoading ? "..." : thisMonthMetricsError ? "Error" : `$${thisMonthMetrics.total_revenue}`}
+                sub={`${Math.abs(revenueChange).toFixed(1)}% ${revenueChange > 0 ? "Increase" : "Decrease"}`}
+                trend={revenueChange > 0 ? "up" : "down"}
+                accentClass={revenueChange > 0 ? "border-emerald-500" : "border-red-400"}
             />
             <MainMetricCard
                 label={"JOBS COMPLETED"}
                 value={jobsLoading ? "..." : jobsError ? "Error": totalJobs}
-                sub={"N/A"}
-                trend={"up"}
-                accentClass={"border-emerald-500"}
+                sub={`${Math.abs(jobCountChange).toFixed(1)}% ${jobCountChange > 0 ? "Increase" : "Decrease"}`}
+                trend={jobCountChange > 0 ? "up" : "down"}
+                accentClass={jobCountChange > 0 ? "border-emerald-500" : "border-red-400"}
             />
             
             <MainMetricCard
