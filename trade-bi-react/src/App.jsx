@@ -15,7 +15,12 @@ import {
   Wind,
   Wrench,
 } from "lucide-react";
-
+import SupabaseQuery from "./SupabaseQuery";
+import RecentJobs from "./components/RecentJobs"
+import MainDashboard from "./components/MainDashboard";
+import Metrics from "./components/Metrics";
+import RevenueBreakdown from "./components/RevenueBreakdown";
+import AddJob from "./components/AddJob";
 // ─── Mock Data ────────────────────────────────────────────────────────────────
 const RECENT_JOBS = [
   { id: 1, name: "AC Install",       customer: "R. Torres",  date: "Jun 10", revenue: 2400, margin: 48, status: "paid" },
@@ -244,9 +249,13 @@ function DashboardPage() {
 
         {/* Jobs table + breakdown */}
         <section className="flex gap-4 flex-1">
-          <RecentJobsTable />
-          <RevenueByType />
+          <RecentJobs />
+          <RevenueBreakdown />
         </section>
+
+  
+          <Metrics />
+          <AddJob />
       </main>
     </div>
   );
@@ -258,6 +267,7 @@ function PlaceholderPage({ title }) {
   return (
     <div className="flex-1 flex items-center justify-center text-slate-600 text-sm">
       {title} — coming soon
+      <AddJob />
     </div>
   );
 }
@@ -274,10 +284,14 @@ export default function App() {
     invoices:  <PlaceholderPage title="Invoices" />,
   };
 
+
   return (
     <div className="flex h-screen bg-slate-900 text-slate-50 overflow-hidden">
       <Sidebar active={activePage} setActive={setActivePage} />
       {pages[activePage]}
+      
+      {/* <RecentJobs /> */}
     </div>
+    
   );
 }
