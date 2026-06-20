@@ -1,18 +1,48 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { supabase } from '../supabaseClient'
 import { HARDCODED_ORG_ID } from '../constants';
-import { HARDCODED_CUSTOMER_ID } from '../constants';
 
 export default function AddJob() {
   const [formData, setFormData] = useState({
-    job_type: '',
+    job_type_id: '',
+    customer_id: '',
     description: '',
     scheduled_date: '',
     completion_date: ''
   })
+  const [jobTypes, setJobTypes] = useState([])
+  const [customers, setCustomers] = useState([])
+  const [loadingOptions, setLoadingOptions] = useState(true)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
   const [success, setSuccess] = useState(false)
+
+  useEffect(() => {
+    const fetchOptions = async () => {
+      const [jobTypeRes, customerRes] = await Promise.all([
+        supabase.rpc('form_job_type'),
+        supabase.rpc('form_job_customer')
+      ])
+
+      if (jobTypeRes.error) {
+        console.log(jobTypeRes.error)
+        setError(jobTypeRes.error)
+      } else {
+        setJobTypes(jobTypeRes.data)
+      }
+
+      if (customerRes.error) {
+        console.log(customerRes.error)
+        setError(customerRes.error)
+      } else {
+        setCustomers(customerRes.data)
+      }
+
+      setLoadingOptions(false)
+    }
+
+    fetchOptions()
+  }, [])
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value })
@@ -24,15 +54,15 @@ export default function AddJob() {
     setError(null)
 
     const { data, error } = await supabase.rpc('insert_job', {
-        p_type: formData.job_type,
-        p_customer_id: HARDCODED_CUSTOMER_ID,
+        p_type: formData.job_type_id,
+        p_customer_id: formData.customer_id,
         p_description: formData.description || null,
         p_scheduled_date: formData.scheduled_date || null,
         p_completion_date: formData.completion_date || null,
         p_organization: HARDCODED_ORG_ID
     })
 
-    if(error){
+    if (error) {
         setError(error);
         console.log(error);
         setLoading(false);
@@ -42,7 +72,6 @@ export default function AddJob() {
     console.log("Inserted job", data);
     setSuccess(true)
     setLoading(false)
-    //setFormData({ job_type: '', email: '', message: '' }) // reset form
   }
 
   return (
@@ -53,18 +82,49 @@ export default function AddJob() {
       <h2 className="text-lg font-semibold text-slate-100">Add Job</h2>
 
       <div className="space-y-1">
-        <label htmlFor="job_type" className="block text-sm font-medium text-slate-300">
+        <label htmlFor="job_type_id" className="block text-sm font-medium text-slate-300">
           Job Type
         </label>
-        <input
-          type="text"
-          id="job_type"
-          name="job_type"
-          value={formData.job_type}
+        <select
+          id="job_type_id"
+          name="job_type_id"
+          value={formData.job_type_id}
           onChange={handleChange}
-          placeholder="e.g. Plumbing repair"
-          className="w-full rounded-md bg-slate-900 border border-slate-600 text-slate-100 placeholder-slate-500 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-        />
+          disabled={loadingOptions}
+          className="w-full rounded-md bg-slate-900 border border-slate-600 text-slate-100 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:opacity-50"
+        >
+          <option value="" disabled>
+            {loadingOptions ? 'Loading...' : 'Select a job type'}
+          </option>
+          {jobTypes.map((jt) => (
+            <option key={jt.id} value={jt.id}>
+              {jt.name}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      <div className="space-y-1">
+        <label htmlFor="customer_id" className="block text-sm font-medium text-slate-300">
+          Customer
+        </label>
+        <select
+          id="customer_id"
+          name="customer_id"
+          value={formData.customer_id}
+          onChange={handleChange}
+          disabled={loadingOptions}
+          className="w-full rounded-md bg-slate-900 border border-slate-600 text-slate-100 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:opacity-50"
+        >
+          <option value="" disabled>
+            {loadingOptions ? 'Loading...' : 'Select a customer'}
+          </option>
+          {customers.map((c) => (
+            <option key={c.id} value={c.id}>
+              {c.first_name} {c.last_name}
+            </option>
+          ))}
+        </select>
       </div>
 
       <div className="space-y-1">
