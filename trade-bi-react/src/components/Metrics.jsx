@@ -51,7 +51,7 @@ async function fetchThisMonthsMetrics(){
         throw error;
     }
 
-    return data?.[0] ?? {job_count: 0, total_revenue: 0};
+    return data?.[0] ?? {job_count: 0, total_revenue: 0, total_labor_cost: 0, total_material_cost: 0};
 }
 
 async function fetchLastMonthMetrics(){
@@ -62,18 +62,32 @@ async function fetchLastMonthMetrics(){
         throw error
     }
     console.log("last months metric data", data);
-    return data?.[0] ?? {job_count: 0, total_revenue: 0};
+    return data?.[0] ?? {job_count: 0, total_revenue: 0, total_labor_cost: 0, total_material_cost: 0};
 }
 
 function computeChange(thisMonth, lastMonth){
+    if(!thisMonth){
+        return 0;
+    }
     // Takes in metrics for this month and last month and returns growth or decay
+    thisMonth = Number(thisMonth) || 0;
+    lastMonth = Number(lastMonth) || 0;
     return ((thisMonth - lastMonth) / thisMonth) * 100;
 }
 
+function getMargin(revenue, laborCost, materialCost){
+    if(!revenue){
+        return 0;
+    }
+    revenue = Number(revenue) || 0;
+    laborCost = Number(laborCost) || 0;
+    materialCost = Number(materialCost) || 0;
+    return ((revenue - laborCost - materialCost) / revenue) * 100
+}
 
 export default function Metrics() {
 
-    const { data: thisMonthMetrics = {job_count: 0, total_revenue: 0},
+    const { data: thisMonthMetrics = {job_count: 0, total_revenue: 0, total_labor_cost: 0, total_material_cost: 0},
             isLoading: thisMonthMetricsLoading,
             isError: thisMonthMetricsError
         } = useQuery({
@@ -86,7 +100,7 @@ export default function Metrics() {
         queryFn: fetchTotalJobs,
     });
 
-    const { data: lastMonthMetrics = {job_count: 0, total_revenue: 0},
+    const { data: lastMonthMetrics = {job_count: 0, total_revenue: 0, total_labor_cost: 0, total_material_cost: 0},
             isLoading: lastMonthMetricsLoading,
             isError: lastMonthMetricsError
         } = useQuery({
@@ -111,12 +125,25 @@ export default function Metrics() {
     
     let revenueChange = 0;
     let jobCountChange = 0;
+    let lastMonthMargin = 0;
+    let thisMonthMargin = 0;
+    let marginChange = 0;
     if(lastMonthMetrics && thisMonthMetrics){
+        console.log("This month metric data:", thisMonthMetrics);
+        console.log("Last month metric data:", lastMonthMetrics);
         console.log("last month revenue", lastMonthMetrics.total_revenue);
         console.log("this months revenue", thisMonthMetrics.total_revenue);
+        
         revenueChange = computeChange(thisMonthMetrics.total_revenue, lastMonthMetrics.total_revenue);
         jobCountChange = computeChange(thisMonthMetrics.job_count, lastMonthMetrics.job_count);
+        thisMonthMargin = getMargin(thisMonthMetrics.total_revenue, thisMonthMetrics.total_labor_cost, thisMonthMetrics.total_material_cost);
+        lastMonthMargin = getMargin(lastMonthMetrics.total_revenue, lastMonthMetrics.total_labor_cost, lastMonthMetrics.total_material_cost);
+        console.log("Last month margin:", lastMonthMargin);
+        console.log("This month margin:", thisMonthMargin);
+        marginChange = computeChange(thisMonthMargin, lastMonthMargin);
+
     }
+
     return (
         <>
             <MainMetricCard
@@ -126,6 +153,7 @@ export default function Metrics() {
                 trend={revenueChange > 0 ? "up" : "down"}
                 accentClass={revenueChange > 0 ? "border-emerald-500" : "border-red-400"}
             />
+
             <MainMetricCard
                 label={"JOBS COMPLETED"}
                 value={jobsLoading ? "..." : jobsError ? "Error": totalJobs}
@@ -133,6 +161,15 @@ export default function Metrics() {
                 trend={jobCountChange > 0 ? "up" : "down"}
                 accentClass={jobCountChange > 0 ? "border-emerald-500" : "border-red-400"}
             />
+
+            <MainMetricCard
+                label={"AVG JOB MARGIN"}
+                value={thisMonthMetricsLoading || lastMonthMetricsLoading ? "..." : thisMonthMetricsError || lastMonthMetricsError ? "Error": `${thisMonthMargin.toFixed(1)}%`}
+                sub={`${Math.abs(marginChange).toFixed(1)}% ${marginChange > 0 ? `↑ vs. last month` : `↓ ${marginChange}% vs. last month`}`}
+                trend={marginChange > 0 ? "up" : "down"}
+                accentClass={marginChange > 0 ? "border-emerald-500" : "border-red-400"}
+            />
+            
             
             <MainMetricCard
                 label={"OUTSTANDING"}
