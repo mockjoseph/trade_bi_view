@@ -217,6 +217,8 @@ function DashboardPage() {
             This month — June 2026
           </p>
           <div className="grid grid-cols-4 gap-3">
+            <Metrics />
+            {/* 
             <MetricCard
               label="Total Revenue"
               value="$18,450"
@@ -244,6 +246,7 @@ function DashboardPage() {
               sub="3 unpaid invoices"
               accentClass="border-red-400"
             />
+            */}
           </div>
         </section>
 
@@ -252,9 +255,6 @@ function DashboardPage() {
           <RecentJobs />
           <RevenueBreakdown />
         </section>
-
-  
-          <Metrics />
           <AddJob />
       </main>
     </div>
