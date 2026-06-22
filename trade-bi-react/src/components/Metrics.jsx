@@ -146,6 +146,7 @@ export default function Metrics() {
 
     return (
         <>
+
             <MainMetricCard
                 label={"REVENUE"}
                 value={thisMonthMetricsLoading ? "..." : thisMonthMetricsError ? "Error" : `$${thisMonthMetrics.total_revenue}`}
@@ -161,6 +162,7 @@ export default function Metrics() {
                 trend={jobCountChange > 0 ? "up" : "down"}
                 accentClass={jobCountChange > 0 ? "border-emerald-500" : "border-red-400"}
             />
+            
 
             <MainMetricCard
                 label={"AVG JOB MARGIN"}
@@ -169,8 +171,8 @@ export default function Metrics() {
                 trend={marginChange > 0 ? "up" : "down"}
                 accentClass={marginChange > 0 ? "border-emerald-500" : "border-red-400"}
             />
-            
-            
+
+
             <MainMetricCard
                 label={"OUTSTANDING"}
                 value={paymentsLoading ? "..." : paymentsError ? "Error" : `$${outstandingPayments.total_revenue}`}

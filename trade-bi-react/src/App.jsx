@@ -21,6 +21,8 @@ import MainDashboard from "./components/MainDashboard";
 import Metrics from "./components/Metrics";
 import RevenueBreakdown from "./components/RevenueBreakdown";
 import AddJob from "./components/AddJob";
+import JobsPage from "./components/JobsPage";
+import JobDetailPage from "./components/JobDetailPage";
 // ─── Mock Data ────────────────────────────────────────────────────────────────
 const RECENT_JOBS = [
   { id: 1, name: "AC Install",       customer: "R. Torres",  date: "Jun 10", revenue: 2400, margin: 48, status: "paid" },
@@ -275,23 +277,35 @@ function PlaceholderPage({ title }) {
 // ─── App Root ─────────────────────────────────────────────────────────────────
 
 export default function App() {
-  const [activePage, setActivePage] = useState("dashboard");
+  const [page, setPage] = useState({ name: 'dashboard' })
 
-  const pages = {
-    dashboard: <DashboardPage />,
-    jobs:      <PlaceholderPage title="Jobs" />,
-    customers: <PlaceholderPage title="Customers" />,
-    invoices:  <PlaceholderPage title="Invoices" />,
-  };
+  const navigateTo = (name, params = {}) => setPage({ name, ...params })
 
+  let content
+  switch (page.name) {
+    case 'dashboard':
+      content = <DashboardPage />
+      break
+    case 'jobs':
+      content = <JobsPage onSelectJob={(id) => navigateTo('jobDetail', { id })} />
+      break
+    case 'jobDetail':
+      content = <JobDetailPage jobId={page.id} onBack={() => navigateTo('jobs')} />
+      break
+    case 'customers':
+      content = <PlaceholderPage title="Customers" />
+      break
+    case 'invoices':
+      content = <PlaceholderPage title="Invoices" />
+      break
+    default:
+      content = <DashboardPage />
+  }
 
   return (
     <div className="flex h-screen bg-slate-900 text-slate-50 overflow-hidden">
-      <Sidebar active={activePage} setActive={setActivePage} />
-      {pages[activePage]}
-      
-      {/* <RecentJobs /> */}
+      <Sidebar active={page.name} setActive={(name) => navigateTo(name)} />
+      {content}
     </div>
-    
-  );
+  )
 }
