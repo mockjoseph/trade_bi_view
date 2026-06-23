@@ -40,5 +40,8 @@ function NotFoundState({ onBack }) {
         ← Back to jobs
       </button>
     </div>
+    
   )
+
+
 }
