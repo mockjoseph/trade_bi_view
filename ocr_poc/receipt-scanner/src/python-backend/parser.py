@@ -3,7 +3,20 @@ from PIL import Image
 import io
 import pytesseract
 from utils import extract_receipt
+from fastapi.middleware.cors import CORSMiddleware
+
+
+
 app = FastAPI()
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://localhost:5173",
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 @app.post("/api/receipts/parse")
 async def parse_receipt(file: UploadFile = File(...)):

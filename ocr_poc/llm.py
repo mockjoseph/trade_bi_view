@@ -38,7 +38,7 @@ OCR TEXT:
     response = requests.post(
         "http://localhost:11434/api/generate",
         json={
-            "model": "mistral",
+            "model": "llama3.1",
             "prompt": prompt,
             "stream": False
         }

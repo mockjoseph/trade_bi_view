@@ -12,6 +12,7 @@ Return ONLY valid JSON.
 Rules:
 - No markdown
 - No explanations
+- Do not guess, only use the OCR text
 - Prices must be numbers
 - If unknown, use null
 - Items must be an array of objects with name and price
@@ -43,8 +44,11 @@ OCR TEXT:
             "stream": False
         }
     )
-    print(response.json())
+    print(response.json()["response"])
     output = response.json()["response"]
 
     # IMPORTANT: parse JSON safely
+    print(type(output))
+    print(repr(output))
+    
     return json.loads(output)

@@ -2,7 +2,7 @@ from fastapi import FastAPI, UploadFile, File
 from PIL import Image
 import io
 import pytesseract
-from utils import extract_receipt
+from utils import run_ocr
 from fastapi.middleware.cors import CORSMiddleware
 
 
@@ -27,14 +27,9 @@ async def parse_receipt(file: UploadFile = File(...)):
     img = Image.open(io.BytesIO(contents)).convert("RGB")
 
     # OCR
-    ocr_text = run_ocr(img)
+    ocr_result = run_ocr(img)
 
     # LLM
-    receipt_data = extract_receipt(ocr_text)
+    receipt_data = (ocr_result)
 
     return receipt_data
-
-def run_ocr(img):
-    data = pytesseract.image_to_string(img)
-    print("OCR DATA:", data)
-    return pytesseract.image_to_string(img)
