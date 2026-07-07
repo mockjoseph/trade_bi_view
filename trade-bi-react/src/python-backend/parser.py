@@ -2,10 +2,10 @@ from fastapi import FastAPI, UploadFile, File
 from PIL import Image
 import io
 import pytesseract
-from utils import run_ocr
+from utils import run_ocr, extract_receipt, preprocess_for_ocr, run_ocr_with_confidence
 from fastapi.middleware.cors import CORSMiddleware
 
-
+PSM_VAL=6
 
 app = FastAPI()
 app.add_middleware(
@@ -29,7 +29,10 @@ async def parse_receipt(file: UploadFile = File(...)):
     # OCR
     ocr_result = run_ocr(img)
 
-    # LLM
-    receipt_data = (ocr_result)
+    processed = preprocess_for_ocr(img)
 
-    return receipt_data
+    ocr_result = run_ocr_with_confidence(processed, psm=PSM_VAL)
+
+    extracted = extract_receipt(ocr_result["text"])
+
+    return extracted
