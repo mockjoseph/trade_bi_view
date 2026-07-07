@@ -14,6 +14,9 @@ import {
   Flame,
   Wind,
   Wrench,
+  Share,
+  Upload,
+  ReceiptIcon
 } from "lucide-react";
 import SupabaseQuery from "./SupabaseQuery";
 import RecentJobs from "./components/RecentJobs"
@@ -23,6 +26,7 @@ import RevenueBreakdown from "./components/RevenueBreakdown";
 import AddJob from "./components/AddJob";
 import JobsPage from "./components/JobsPage";
 import JobDetailPage from "./components/JobDetailPage";
+import ReceiptUploader from "./components/Upload";
 // ─── Mock Data ────────────────────────────────────────────────────────────────
 const RECENT_JOBS = [
   { id: 1, name: "AC Install",       customer: "R. Torres",  date: "Jun 10", revenue: 2400, margin: 48, status: "paid" },
@@ -77,6 +81,7 @@ function Sidebar({ active, setActive }) {
     { id: "jobs",      icon: Briefcase,       label: "Jobs" },
     { id: "customers", icon: Users,            label: "Customers" },
     { id: "invoices",  icon: FileText,         label: "Invoices" },
+    { id: "scan",      icon: Share,            label: "Upload Reciept"}
   ];
 
   return (
@@ -297,6 +302,9 @@ export default function App() {
       break
     case 'invoices':
       content = <PlaceholderPage title="Invoices" />
+      break
+    case 'scan':
+      content = <ReceiptUploader />
       break
     default:
       content = <DashboardPage />
