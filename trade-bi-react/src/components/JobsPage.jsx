@@ -1,3 +1,4 @@
+
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '../supabaseClient'
 import { HARDCODED_ORG_ID } from '../constants';
@@ -13,7 +14,7 @@ async function getAllJobs() {
   return data
 }
 
-export default function JobsPage({ onSelectJob }) {
+export default function JobsPage({ onSelectJob, title = 'Jobs' }) {
   const { data: jobs = [], isLoading: jobsLoading, isError: jobsError, error: jobsErrorDetail } = useQuery({
     queryKey: ['getJobs'],
     queryFn: getAllJobs,
@@ -45,7 +46,7 @@ export default function JobsPage({ onSelectJob }) {
 
   return (
     <div className="max-w-3xl mx-auto px-4 py-8 space-y-3">
-      <h1 className="text-xl font-semibold text-slate-100 mb-4">Jobs</h1>
+      <h1 className="text-xl font-semibold text-slate-100 mb-4">{title}</h1>
 
       {jobs.map((job) => (
         <JobCard

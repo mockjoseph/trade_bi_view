@@ -292,7 +292,7 @@ export default function App() {
       content = <DashboardPage />
       break
     case 'jobs':
-      content = <JobsPage onSelectJob={(id) => navigateTo('jobDetail', { id })} />
+      content = <JobsPage onSelectJob={(id) => navigateTo('jobDetail', { id })} title="Jobs"/>
       break
     case 'jobDetail':
       content = <JobDetailPage jobId={page.id} onBack={() => navigateTo('jobs')} />
