@@ -17,10 +17,10 @@ This app is currently built using a React-Javascript framework for the web-app v
 and easy for scale or changes for anyone using it. The backend of the application is more involved. The developers use Python's FastAPI as a backend for all of the data computations and LLM calls.
 THis app does not use AI extensively so the devs have opted to use a local models from Ollama, which makes AI calls completely free (given user has adequate hardware).
 
-
+---------------------------------------------------------------
 _Each 'tool' used in this application will have in overview of how it works in ./TOOLS_README.md_
 _Database Schema and Supabase Configuration steps can be found in ./DATABASE_README.md_
-
+--------------------------------------------------------------
 
 ### Demo / Daily use case
 User Logs ON --> Views daily relevent info (jobs upcoming, financial details etc.) ---> User needs to manage updates ---> User adds a new job upcoming ---> Database is updated
