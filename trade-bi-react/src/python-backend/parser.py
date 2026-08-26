@@ -18,13 +18,46 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
 @app.get("/health")
 async def health_check():
-    
+    '''
+     Function returns a generic health check of the application for 
+     all of the services hooked into backend
+     Currently just FastAPI server and 
+    '''
+
     return {
         "status": "healthy"
     }
 
+
+@app.get("/api/metrics/revenue_monthly")
+async def get_revenue_month():
+    '''
+     Function will query database for revenue data and will return 
+     the amount of total revenue for the month ( past 30 days )
+    '''
+
+    return
+
+
+@app.get("/api/metrics/jobs_completed")
+async def get_jobs_completed():
+    '''
+     Function queries database for job data
+     Returns total jobs completed in the past month ( past 30 days )
+    '''
+    return
+
+
+@app.get("/api/average_margin")
+async def get_average_job_margin():
+    '''
+     Function queries database for job data
+     Return average margin on all jobs completed
+    '''
+    return
 
 @app.post("/api/receipts/parse")
 async def parse_receipt(file: UploadFile = File(...)):
