@@ -71,6 +71,15 @@ async def add_materials(payload: dict):
 async def generate_invoice(payload: dict):
     '''
      Function generates an invoice for a given job (within the payload)
+     Returns: Invoice
+    '''
+    
+
+@app.post("/api/reciepts/insert")
+async def input_reciept(payload: dict):
+    '''
+      Takes in reciept data and inputs it into databse with correlating job
+      Returns: Status code of insert operation
     '''
 
 
