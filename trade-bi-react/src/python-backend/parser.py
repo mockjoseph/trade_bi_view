@@ -59,6 +59,22 @@ async def get_average_job_margin():
     '''
     return
 
+@app.post("/api/add_materials")
+async def add_materials(payload: dict):
+    '''
+     Function add materials from a reciept scan associated with a job
+     all data concerning the update is added and changed upon the update
+     Returns: a success status based on change
+    '''
+
+@app.post("/api/generate_invoice")
+async def generate_invoice(payload: dict):
+    '''
+     Function generates an invoice for a given job (within the payload)
+    '''
+
+
+
 @app.post("/api/receipts/parse")
 async def parse_receipt(file: UploadFile = File(...)):
     contents = await file.read()
@@ -67,11 +83,8 @@ async def parse_receipt(file: UploadFile = File(...)):
 
     # OCR
     ocr_result = run_ocr(img)
-
     processed = preprocess_for_ocr(img)
-
     ocr_result = run_ocr_with_confidence(processed, psm=PSM_VAL)
-
     extracted = extract_receipt(ocr_result["text"])
 
     return extracted
