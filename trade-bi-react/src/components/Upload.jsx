@@ -7,7 +7,11 @@ import {
   CheckCircle2,
   Loader2,
   RotateCcw,
+  ChevronLeft,
+  ArrowRight,
 } from "lucide-react";
+import JobsPage from "./JobsPage";
+import { HARDCODED_ORG_ID } from "../constants";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -85,7 +89,15 @@ export default function ReceiptUploader({ onSave } = {}) {
   const [errorMsg, setErrorMsg] = useState("");
   const [imagePreview, setImagePreview] = useState(null);
   const [receipt, setReceipt] = useState(null); // normalized, editable
-  const [savedFlash, setSavedFlash] = useState(false);
+
+  // step governs what happens once a receipt has been parsed:
+  // 'review' -> editing the extracted fields
+  // 'select-job' -> attaching this receipt to a job
+  // 'done' -> job_id attached, handed off via onSave
+  const [step, setStep] = useState("review");
+  const [pendingReceipt, setPendingReceipt] = useState(null); // cleaned receipt, awaiting a job
+  const [selectedJobId, setSelectedJobId] = useState(null);
+
   const fileInputRef = useRef(null);
 
   useEffect(() => {
@@ -100,7 +112,6 @@ export default function ReceiptUploader({ onSave } = {}) {
 
     setStatus("loading");
     setErrorMsg("");
-    setSavedFlash(false);
     if (imagePreview) URL.revokeObjectURL(imagePreview);
     setImagePreview(URL.createObjectURL(file));
 
@@ -129,33 +140,36 @@ export default function ReceiptUploader({ onSave } = {}) {
 
   function updateField(field, value) {
     setReceipt((r) => ({ ...r, [field]: value }));
-    setSavedFlash(false);
+  }
+
+  function sumItems(items) {
+    return items.reduce((sum, it) => sum + (toNumberOrNull(it.price) || 0), 0);
   }
 
   function updateItem(id, field, value) {
-    setReceipt((r) => ({
-      ...r,
-      items: r.items.map((it) => (it.id === id ? { ...it, [field]: value } : it)),
-    }));
-    setSavedFlash(false);
+    setReceipt((r) => {
+      const items = r.items.map((it) => (it.id === id ? { ...it, [field]: value } : it));
+      return { ...r, items, total: sumItems(items).toFixed(2) };
+    });
   }
 
   function removeItem(id) {
-    setReceipt((r) => ({ ...r, items: r.items.filter((it) => it.id !== id) }));
-    setSavedFlash(false);
+    setReceipt((r) => {
+      const items = r.items.filter((it) => it.id !== id);
+      return { ...r, items, total: sumItems(items).toFixed(2) };
+    });
   }
 
   function addItem() {
-    setReceipt((r) => ({
-      ...r,
-      items: [...r.items, { id: nextId(), name: "", price: "" }],
-    }));
-    setSavedFlash(false);
+    setReceipt((r) => {
+      const items = [...r.items, { id: nextId(), name: "", price: "" }];
+      return { ...r, items, total: sumItems(items).toFixed(2) };
+    });
   }
 
   const itemsSum = useMemo(() => {
     if (!receipt) return 0;
-    return receipt.items.reduce((sum, it) => sum + (toNumberOrNull(it.price) || 0), 0);
+    return sumItems(receipt.items);
   }, [receipt]);
 
   const subtotalNum = receipt ? toNumberOrNull(receipt.subtotal) : null;
@@ -164,23 +178,13 @@ export default function ReceiptUploader({ onSave } = {}) {
 
   const subtotalMismatch = subtotalNum !== null && Math.abs(itemsSum - subtotalNum) > 0.01;
 
-  const totalMismatch =
-    subtotalNum !== null &&
-    taxNum !== null &&
-    totalNum !== null &&
-    Math.abs(subtotalNum + taxNum - totalNum) > 0.01;
-
   function applyComputedSubtotal() {
     updateField("subtotal", itemsSum.toFixed(2));
   }
 
-  function applyComputedTotal() {
-    if (subtotalNum === null) return;
-    const computed = subtotalNum + (taxNum || 0);
-    updateField("total", computed.toFixed(2));
-  }
-
-  function handleSave() {
+  // Locks in the edited receipt fields, then moves to job selection.
+  // No job_id yet at this point — that gets merged in once one is picked.
+  function handleConfirmReceipt() {
     if (!receipt) return;
     const cleaned = {
       merchant: receipt.merchant.trim() || null,
@@ -195,22 +199,107 @@ export default function ReceiptUploader({ onSave } = {}) {
       tax: taxNum,
       total: totalNum,
     };
-    setSavedFlash(true);
-    if (typeof onSave === "function") {
-      onSave(cleaned);
-    } else {
-      console.log("Receipt confirmed:", cleaned);
-    }
+    setPendingReceipt(cleaned);
+    setStep("select-job");
   }
+
+  // Called by JobsPage with the selected job's id. This is where the
+  // foreign key gets attached to the receipt payload.
+ async function handleJobPicked(jobId) {
+  if (!pendingReceipt) return;
+  const finalPayload = { ...pendingReceipt, job_id: jobId, org_id: HARDCODED_ORG_ID };
+
+  setSelectedJobId(jobId);
+  setSaveStatus("saving"); // new state: "idle" | "saving" | "error"
+
+  try {
+    await updateDatabase(finalPayload);
+  } catch (err) {
+    console.error(err);
+    setSaveStatus("error");
+    return; // stay on this step so they can retry, don't advance to "done"
+  }
+
+  if (typeof onSave === "function") onSave(finalPayload);
+  setStep("done");
+}
+
+async function updateDatabase(finalPayload) {
+  const { job_id, org_id, items } = finalPayload;
+
+  const results = await Promise.all(
+    items.map((it) =>
+      supabase.rpc('insert_item', {
+        org_id,
+        job_id,
+        name: it.name,
+        price: it.price,
+      })
+    )
+  );
+
+  const failed = results.find((r) => r.error);
+  if (failed) {
+    console.log(failed.error);
+    throw failed.error;
+  }
+
+  return results.map((r) => r.data);
+}
 
   function reset() {
     setReceipt(null);
     setStatus("idle");
     setErrorMsg("");
-    setSavedFlash(false);
+    setStep("review");
+    setPendingReceipt(null);
+    setSelectedJobId(null);
     if (imagePreview) URL.revokeObjectURL(imagePreview);
     setImagePreview(null);
     if (fileInputRef.current) fileInputRef.current.value = "";
+  }
+
+  if (step === "select-job") {
+    return (
+      <div className="flex-1 overflow-y-auto px-6 py-5">
+        <button
+          type="button"
+          onClick={() => setStep("review")}
+          className="flex items-center gap-1 text-[11px] text-slate-500 hover:text-slate-300 transition-colors mb-1 max-w-3xl mx-auto px-4"
+        >
+          <ChevronLeft size={12} />
+          Back to receipt
+        </button>
+        <JobsPage title="Select a job for this receipt" onSelectJob={handleJobPicked} />
+      </div>
+    );
+  }
+
+  if (step === "done") {
+    return (
+      <div className="flex-1 overflow-y-auto px-6 py-5">
+        <div className="max-w-md mx-auto">
+          <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-600 mb-3">
+            Materials Receipt
+          </p>
+          <div className="bg-slate-800 rounded-xl overflow-hidden px-4 py-6 text-center">
+            <CheckCircle2 size={20} className="text-emerald-400 mx-auto mb-2" />
+            <p className="text-sm font-semibold text-slate-200 mb-1">Receipt attached to job</p>
+            <p className="text-xs text-slate-500 mb-4">
+              {pendingReceipt?.merchant || "Receipt"} · ${money(pendingReceipt?.total)} · Job #{selectedJobId}
+            </p>
+            <button
+              type="button"
+              onClick={reset}
+              className="inline-flex items-center gap-1.5 bg-amber-500 text-slate-900 hover:bg-amber-400 font-semibold rounded-xl py-2 px-4 text-sm transition-colors"
+            >
+              <UploadIcon size={14} />
+              Log another receipt
+            </button>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -275,12 +364,14 @@ export default function ReceiptUploader({ onSave } = {}) {
                   className={`${inputBase} text-sm font-semibold text-slate-50 placeholder:text-slate-600 placeholder:font-medium`}
                   value={receipt.merchant}
                   placeholder="Merchant name"
+                  autoComplete="off"
                   onChange={(e) => updateField("merchant", e.target.value)}
                 />
                 <input
                   className={`${inputBase} text-[11px] text-slate-500 mt-0.5`}
                   value={receipt.date}
                   placeholder="Date (e.g. 2026-07-07)"
+                  autoComplete="off"
                   onChange={(e) => updateField("date", e.target.value)}
                 />
               </div>
@@ -290,9 +381,10 @@ export default function ReceiptUploader({ onSave } = {}) {
                 {receipt.items.map((it) => (
                   <div key={it.id} className="px-4 py-2 flex items-center gap-2">
                     <input
-                      className={`${inputBase} flex-1 text-sm text-slate-300`}
+                      className={`${inputBase} text-sm text-slate-300`}
                       value={it.name}
                       placeholder="Item name"
+                      autoComplete="off"
                       onChange={(e) => updateItem(it.id, "name", e.target.value)}
                     />
                     <input
@@ -366,11 +458,6 @@ export default function ReceiptUploader({ onSave } = {}) {
                     onChange={(e) => updateField("total", e.target.value)}
                   />
                 </div>
-                {totalMismatch && (
-                  <AlertPill action={{ label: "Fix it", onClick: applyComputedTotal }}>
-                    Subtotal + tax = ${money(subtotalNum + taxNum)}, not ${money(totalNum)}
-                  </AlertPill>
-                )}
               </div>
             </div>
 
@@ -386,20 +473,13 @@ export default function ReceiptUploader({ onSave } = {}) {
               </button>
               <button
                 type="button"
-                onClick={handleSave}
+                onClick={handleConfirmReceipt}
                 className="flex-1 flex items-center justify-center gap-1.5 bg-amber-500 text-slate-900 hover:bg-amber-400 font-semibold rounded-xl py-2.5 text-sm transition-colors"
               >
-                <CheckCircle2 size={15} />
-                Confirm receipt
+                Choose job
+                <ArrowRight size={15} />
               </button>
             </div>
-
-            {savedFlash && (
-              <div className="flex items-center justify-center gap-1.5 text-[11px] text-emerald-400 font-medium mt-2.5">
-                <CheckCircle2 size={12} />
-                Looks good — ready to attach to a job.
-              </div>
-            )}
           </>
         )}
       </div>
