@@ -10,10 +10,7 @@ PSM_VAL=6
 app = FastAPI()
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:5173",
-    ],
-    allow_credentials=True,
+    allow_origins=["http://localhost:5174", "http://localhost:3000"],
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -73,7 +70,7 @@ async def generate_invoice(payload: dict):
      Function generates an invoice for a given job (within the payload)
      Returns: Invoice
     '''
-    
+
 
 @app.post("/api/reciepts/insert")
 async def input_reciept(payload: dict):

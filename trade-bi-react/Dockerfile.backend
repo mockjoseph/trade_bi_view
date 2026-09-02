@@ -1,9 +1,24 @@
-FROM python:3.11
+FROM python:3.11-slim
 
 WORKDIR /app
 
-COPY src/python-backend/ .
-RUN pip install requirements.txt
+# Required apt commands for backend ocr parsing
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        libgl1 \
+        libglib2.0-0 \
+    && rm -rf /var/lib/apt/lists/*
 
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        tesseract-ocr \
+    && rm -rf /var/lib/apt/lists/*
+
+# Standard docker copy and install pythoon dependencies
+COPY src/python-backend/requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY src/python-backend/ .
+
+# Start the docker container and service with --reload to update when things cahnge as this 
+# is geared towards using in development
 EXPOSE 5002
 CMD ["uvicorn", "api:app", "--host", "0.0.0.0", "--port", "5002", "--reload"]
